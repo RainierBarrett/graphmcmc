@@ -27,8 +27,10 @@ class TestGraphmcmc(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_000_something(self):
-        pass
+    def test_printout(self):#just something to get me started
+        assert graphmcmc.output() == 1
+
+#    def test_
 
     def test_command_line_interface(self):
         runner = CliRunner()
