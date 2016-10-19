@@ -2,20 +2,12 @@
 graphmcmc
 ===============================
 
-
-.. image:: https://img.shields.io/pypi/v/graphmcmc.svg
-        :target: https://pypi.python.org/pypi/graphmcmc
-
 .. image:: https://img.shields.io/travis/RainierBarrett/graphmcmc.svg
         :target: https://travis-ci.org/RainierBarrett/graphmcmc
 
-.. image:: https://readthedocs.org/projects/graphmcmc/badge/?version=latest
-        :target: https://graphmcmc.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
+.. image:: https://coveralls.io/repos/github/RainierBarrett/graphmcmc/badge.svg?branch=master
+     :target: https://coveralls.io/github/RainierBarrett/graphmcmc?branch=master
 
-.. image:: https://pyup.io/repos/github/RainierBarrett/graphmcmc/shield.svg
-     :target: https://pyup.io/repos/github/RainierBarrett/graphmcmc/
-     :alt: Updates
 
 
 This is a Markov-chain Monte Carlo simulator for graphs in Python. It takes into account total graph weights and path-lengths to the zero node to evaluate state transition probabilities.
