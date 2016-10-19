@@ -13,11 +13,14 @@ env:
 - TOXENV=py34
 - TOXENV=py27
 - TOXENV=pypy
-install: pip install -U tox
-	 pip install -r requirements_dev.txt
-	 pip install coveralls
+install:
+- pip install -U tox
+- pip install -r requirements_dev.txt
+- pip install coveralls
 language: python
 python: 3.5
-script: tox -e ${TOXENV}
-	coverage run --source=graphmcmc/graphmcmc.py setup.py test
-after_success: coveralls
+script:
+- tox -e ${TOXENV}
+- coverage run --source=graphmcmc/graphmcmc.py setup.py test
+after_success:
+- coveralls
