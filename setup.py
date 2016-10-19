@@ -20,7 +20,7 @@ test_requirements = [
 
 setup(
     name='graphmcmc',
-    version='0.1.1',
+    version='0.1.2',
     description="This is a Markov-chain Monte Carlo simulator for graphs in Python",
     long_description=readme + '\n\n' + history,
     author="Rainier Barrett",
