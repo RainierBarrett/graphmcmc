@@ -20,11 +20,12 @@ This is a Markov-chain Monte Carlo simulator for graphs in Python. It takes into
 Features
 --------
 
-* TODO:
-  * Add initial graph maker function -- ensure it's connected
-  * Add function to test if graphs are connected
-  * Add funciton to propose new state from previous, and calculate q(i|j), q(j|i)
-  * Add function to calculate pi_i / pi_j
+TODO:
+--------
+* Add initial graph maker function -- ensure it's connected
+* Add function to test if graphs are connected
+* Add funciton to propose new state from previous, and calculate q(i|j), q(j|i)
+* Add function to calculate pi_i / pi_j
 
 
 License
