@@ -18,7 +18,7 @@ graphmcmc
      :alt: Updates
 
 
-This is a Markov-chain Monte Carlo simulator for graphs in Python
+This is a Markov-chain Monte Carlo simulator for graphs in Python. It takes into account total graph weights and path-lengths to the zero node to evaluate state transition probabilities.
 
 
 * Free software: GNU General Public License v3
