@@ -59,12 +59,41 @@ class TestGraphmcmc(unittest.TestCase):
 
 
     def test_make_graph(self):
-        '''This tests that we are able to make a connected graph out of our input nodes, and that it is random (the connections should be different each time).'''
+        '''This tests that we are able to make a connected graph out of our input nodes, and that the weights are correct.'''
         graphmcmc.read_file(self.test_infile)
         graphmcmc.make_graph()
         assert isinstance(graphmcmc.graph, nx.Graph)
         assert nx.is_connected(graphmcmc.graph)
+        #check all the weights worked (though I technically already tested this in test_distance)
+        assert graphmcmc.graph[0][1]['weight'] == 1
+        assert graphmcmc.graph[1][2]['weight'] == math.sqrt(2)
+        assert graphmcmc.graph[2][3]['weight'] == 1
+        assert graphmcmc.graph[3][4]['weight'] == math.sqrt(1.25)
+        assert graphmcmc.graph[4][5]['weight'] == math.sqrt(0.75**2 + 1.25**2)
 
+    def test_new_edge(self):
+        '''This tests to ensure that the new_edge function handles inserting an edge properly.'''
+        #I don't need to check that it ignores multiple edges between the same vertices,
+        #since that's a built-in behavior of the nx.Graph object. :)
+        graphmcmc.read_file(self.test_infile)
+        graphmcmc.make_graph()
+        graphmcmc.new_edge(2,0)
+        self.assertTrue(graphmcmc.graph[0][2])
+        assert graphmcmc.graph[0][2]['weight'] == 1
+        
+    def test_cut_edge(self):
+        '''This tests to ensure that removing an edge works properly for both good and bad cuts.'''
+        graphmcmc.read_file(self.test_infile)
+        graphmcmc.make_graph()
+        graphmcmc.new_edge(2,0)
+        assert graphmcmc.graph.number_of_edges() == 6
+        graphmcmc.cut_edge(0,2)
+        assert graphmcmc.graph.number_of_edges() == 5
+        graphmcmc.cut_edge(0,2)
+        assert graphmcmc.graph.number_of_edges() == 5
+        graphmcmc.cut_edge(0,1)
+        assert nx.is_connected(graphmcmc.graph)
+        
     def test_command_line_interface(self):
         runner = CliRunner()
         result = runner.invoke(cli.main)

@@ -31,5 +31,15 @@ def make_graph():
     global nodes
     print("nodes is {}".format(nodes))
     print("nmin is {}".format(Nmin))
-    for i in range(Nmin):
-        graph.add_edge(i, i+1, weight=distance(nodes[i],nodes[i+1]))
+    for i in range(Nmin):#for now, I'm just putting the tuples in a line
+        graph.add_edge(i, i+1, weight=distance(nodes[i], nodes[i+1]))
+
+def new_edge(idx1, idx2):
+    global graph
+    graph.add_edge(idx1, idx2, weight=distance(nodes[idx1], nodes[idx2]))
+
+def cut_edge(idx1, idx2):
+    global graph
+    if(idx1 in graph.neighbors(idx2) and ( len(graph.neighbors(idx1)) > 1 and len(graph.neighbors(idx2)) > 1)):#make sure we only try to remove if it's there
+        graph.remove_edge(idx1,idx2)
+
