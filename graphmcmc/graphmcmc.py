@@ -1,13 +1,35 @@
 # -*- coding: utf-8 -*-
 import networkx as nx
 import graphviz as gv
-
-def output():#this was just a way to let me understand python testing. Nice and easy.
-    return(1)
+import math
 
 nodes = []
+Nmin = 0
+Nmax = 0
+Ni = 0
 
 def read_file(infile):
+    global nodes
+    global Nmin
+    global Nmax
+    if(len(nodes) != 0):#in case it gets called more than once for some reason
+        nodes = []
     with open(infile) as f:
         for i in f:
-            nodes.append(tuple(map(float,i.split(','))))
+            nodes.append((tuple(map(float,i.split(',')))))
+    Nmin = (len(nodes) - 1) #the minimum number of edges is n-1
+    Nmax = len(nodes) * (len(nodes) -1)/ 2 #the most edges we can have is n(n-1)/2
+
+graph = nx.Graph()
+
+def distance(p1, p2):#takes tuples p1 and p2
+    return(math.sqrt((p1[0]-p2[0])**2 + (p1[1] - p2[1])**2))
+
+def make_graph():
+    global graph
+    global Nmin#need to modify the actual graph
+    global nodes
+    print("nodes is {}".format(nodes))
+    print("nmin is {}".format(Nmin))
+    for i in range(Nmin):
+        graph.add_edge(i, i+1, weight=distance(nodes[i],nodes[i+1]))
