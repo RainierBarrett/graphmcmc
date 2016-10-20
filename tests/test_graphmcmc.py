@@ -31,7 +31,13 @@ class TestGraphmcmc(unittest.TestCase):
     def test_printout(self):#just something to get me started
         assert graphmcmc.output() == 1
 
-#    def test_
+    
+    def test_read_file(self):
+        '''This tests that we can read an input file into a list of nodes'''
+        test_infile = 'test_infile.txt'#an included test infile with some touples.
+        graphmcmc.read_file(test_infile)
+        self.assertTrue(graphmcmc.nodes)#make sure the list of nodes isn't empty
+        
 
     def test_command_line_interface(self):
         runner = CliRunner()
