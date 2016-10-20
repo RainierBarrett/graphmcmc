@@ -16,7 +16,8 @@ from click.testing import CliRunner
 
 from graphmcmc import graphmcmc
 from graphmcmc import cli
-
+import networkx as nx
+import graphviz as gv
 
 
 class TestGraphmcmc(unittest.TestCase):

@@ -11,10 +11,14 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'Click>=6.0',
+    'graphviz>=0.5.1',
+    'networkx>=1.11'
     # TODO: put package requirements here
 ]
 
 test_requirements = [
+    'graphviz>=0.5.1',
+    'networkx>=1.11'
     # TODO: put package test requirements here
 ]
 
