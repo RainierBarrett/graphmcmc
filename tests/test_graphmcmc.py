@@ -8,7 +8,7 @@ test_graphmcmc
 Tests for `graphmcmc` module.
 """
 
-
+from __future__ import division
 import sys
 import unittest
 from contextlib import contextmanager
@@ -142,9 +142,9 @@ class TestGraphmcmc(unittest.TestCase):
         testfile = 'next_test.txt'#this is an input file with only three points
         graphmcmc.read_file(testfile)
         graphmcmc.make_graph()
-        print("prop_graph now has edges {}".format(graphmcmc.prop_graph.edges()))
+        #print("prop_graph now has edges {}".format(graphmcmc.prop_graph.edges()))
         graphmcmc.propose_new()
-        print("and now it has {}".format(graphmcmc.prop_graph.edges()))
+        #print("and now it has {}".format(graphmcmc.prop_graph.edges()))
         #only one proposal should be possible (new edge: 0-2)
         assert len(graphmcmc.prop_graph.edges()) == 3
         assert 0 in graphmcmc.prop_graph.neighbors(2)
@@ -159,3 +159,79 @@ class TestGraphmcmc(unittest.TestCase):
         #now that there's a loop, there's three viable cuts (and no unviable ones)
         graphmcmc.propose_new()
         assert len(graphmcmc.prop_graph.edges()) == 2
+
+    def test_get_q_forward(self):
+        '''This tests that we get the correct probability of transitioning forward (to a proposal) from the current graph under our proposal distribution. See documentation for details.'''
+        testfile = 'next_test.txt'#this is an input file with only three points
+        for i in range(100):
+            graphmcmc.read_file(testfile)
+            graphmcmc.make_graph()
+            graphmcmc.propose_new()#this changes only the proposal graph in a predictable way
+            prob_forward = graphmcmc.get_q(graphmcmc.graph, graphmcmc.prop_graph)
+            assert prob_forward == 1#this should be our only choice.
+
+        testfile2 = 'q_forward_test.txt'#a second check
+        for i in range(100):
+            graphmcmc.read_file(testfile2)
+            graphmcmc.make_graph()
+            graphmcmc.propose_new()
+            prob_forward = graphmcmc.get_q(graphmcmc.graph, graphmcmc.prop_graph)
+            assert prob_forward == float(1.0)/float(3.0)
+
+        testfile = 'next_test.txt'#this is an input file with only three points
+        graphmcmc.read_file(testfile)
+        for i in range(100):
+            graphmcmc.make_graph()
+            graphmcmc.new_edge(graphmcmc.graph, 0, 2)#now it's maximally-connected
+            graphmcmc.new_edge(graphmcmc.prop_graph, 0, 2)
+            graphmcmc.propose_new()#this changes only the proposal graph in a predictable way
+            prob_forward = graphmcmc.get_q(graphmcmc.graph, graphmcmc.prop_graph)
+            assert prob_forward == 1#this should be our only choice.
+
+        testfile2 = 'q_forward_test.txt'#a second check
+        for i in range(100):
+            graphmcmc.read_file(testfile2)
+            graphmcmc.make_graph()
+            graphmcmc.new_edge(graphmcmc.graph, 0, 2)#now it's maximally-connected
+            graphmcmc.new_edge(graphmcmc.prop_graph, 0, 2)
+            graphmcmc.propose_new()
+            prob_forward = graphmcmc.get_q(graphmcmc.graph, graphmcmc.prop_graph)
+            assert (prob_forward - float(1.0)/float(3.0)) < 1 * 10 **-7
+
+    def test_get_q_backward(self):
+        '''This tests that we get the correct reverse transition probability (from a proposal to the current state) under our proposal distribution. See documentation for details.'''
+        testfile = 'next_test.txt'#this is an input file with only three points
+        for i in range(100):
+            graphmcmc.read_file(testfile)
+            graphmcmc.make_graph()
+            graphmcmc.propose_new()#this changes only the proposal graph in a predictable way
+            prob_forward = graphmcmc.get_q(graphmcmc.prop_graph, graphmcmc.graph)
+            assert prob_forward == 1#this should be our only choice.
+
+        testfile2 = 'q_forward_test.txt'#a second check
+        for i in range(100):
+            graphmcmc.read_file(testfile2)
+            graphmcmc.make_graph()
+            graphmcmc.propose_new()
+            prob_forward = graphmcmc.get_q(graphmcmc.prop_graph, graphmcmc.graph)
+            assert (prob_forward - float(1.0)/float(3.0)) < 1 * 10 **-7
+
+        testfile = 'next_test.txt'#this is an input file with only three points
+        graphmcmc.read_file(testfile)
+        for i in range(100):
+            graphmcmc.make_graph()
+            graphmcmc.new_edge(graphmcmc.graph, 0, 2)#now it's maximally-connected
+            graphmcmc.new_edge(graphmcmc.prop_graph, 0, 2)
+            graphmcmc.propose_new()#this changes only the proposal graph in a predictable way
+            prob_forward = graphmcmc.get_q(graphmcmc.prop_graph, graphmcmc.graph)
+            assert prob_forward == 1#this should be our only choice.
+
+        testfile2 = 'q_forward_test.txt'#a second check
+        for i in range(100):
+            graphmcmc.read_file(testfile2)
+            graphmcmc.make_graph()
+            graphmcmc.new_edge(graphmcmc.graph, 0, 2)#now it's maximally-connected
+            graphmcmc.new_edge(graphmcmc.prop_graph, 0, 2)
+            graphmcmc.propose_new()
+            prob_forward = graphmcmc.get_q(graphmcmc.prop_graph, graphmcmc.graph)
+            assert (prob_forward - float(1.0)/float(3.0)) < 1 * 10 **-7

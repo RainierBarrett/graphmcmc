@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import division#what is up with float division in python2? get outta here
 import networkx as nx
 import graphviz as gv
 import math
@@ -62,8 +63,8 @@ def add_or_cut(testing = False):
     #this is 1 when current edge count is minimal, and 0 when current edge count is maximal
     prob_add = ( Nmax - graph.number_of_edges() ) / ( Nmax - Nmin )
     rand = random.random()#roll the dice
-    if testing:#during tests, make sure RNG is working
-        print("rand is {}".format(rand))
+    #if testing:#during tests, make sure RNG is working
+    #    print("rand is {}".format(rand))
     if ( rand < prob_add ):
         return 1 #1 for add
     else:
@@ -112,3 +113,19 @@ def propose_new():
 
     return
 
+def get_q(graph1, graph2):
+    '''This calculates the q(j|i) or q(i|j) term in our MCMC acceptance ratio. See the README for more info. Call with graph first and prop_graph second for q(j|i) (forward) and vice-versa for q(i|j) (reverse).'''
+    global graph
+    global prop_graph
+    global Nmin
+    global Nmax
+    prob_add = ( Nmax - graph1.number_of_edges() ) / ( Nmax - Nmin )#the probability we add an edge
+    if graph2.number_of_edges() > graph1.number_of_edges():
+        #we proposed an addition
+        prob_edge = 1 / ( Nmax - graph1.number_of_edges() )#the probability we pick any one edge
+        return ( prob_add * prob_edge )
+    else:#graph2.number_of_edges() < graph1.number_of_edges
+        prob_cut = float(1.0) - prob_add
+        bridges = get_bridges(graph2)#need the list of bridges for prob_edge
+        prob_edge = float(1.0) / ( graph1.number_of_edges() - len(bridges) )
+        return ( prob_cut * prob_edge )

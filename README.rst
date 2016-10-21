@@ -22,10 +22,11 @@ Features
 
 TODO:
 --------
-* Add initial graph maker function -- ensure it's connected
-* Add function to test if graphs are connected
-* Add funciton to propose new state from previous, and calculate q(i|j), q(j|i)
-* Add function to calculate pi_i / pi_j
+* Add function to calculate pi_i / pi_j.
+* Update this documentation with thorough explanation of proposal distribution and project in general.
+* Put in actual simulation step function (tie it all together).
+* Add function to track states -- Dict of adjacency matrices?
+* Finally, some statistical analysis functions for once the sim is over.
 
 
 License
