@@ -22,8 +22,8 @@ import math
 
 
 class TestGraphmcmc(unittest.TestCase):
-    test_infile = 'test_infile.txt'#an included test infile with some touples.
-    def setUp(self):
+    test_infile = 'test_infile.txt'#an included test infile with some tuples.
+    def setUp(self):#I'm not sure if the testing library needs these or not, so they're here
         pass
 
     def tearDown(self):
@@ -77,7 +77,7 @@ class TestGraphmcmc(unittest.TestCase):
         #since that's a built-in behavior of the nx.Graph object. :)
         graphmcmc.read_file(self.test_infile)
         graphmcmc.make_graph()
-        graphmcmc.new_edge(2,0)
+        graphmcmc.new_edge(graphmcmc.graph, 2, 0)
         self.assertTrue(graphmcmc.graph[0][2])
         assert graphmcmc.graph[0][2]['weight'] == 1
         
@@ -85,14 +85,46 @@ class TestGraphmcmc(unittest.TestCase):
         '''This tests to ensure that removing an edge works properly for both good and bad cuts.'''
         graphmcmc.read_file(self.test_infile)
         graphmcmc.make_graph()
-        graphmcmc.new_edge(2,0)
+        graphmcmc.new_edge(graphmcmc.graph, 2, 0)
         assert graphmcmc.graph.number_of_edges() == 6
-        graphmcmc.cut_edge(0,2)
+        graphmcmc.cut_edge(graphmcmc.graph, 0, 2)
         assert graphmcmc.graph.number_of_edges() == 5
-        graphmcmc.cut_edge(0,2)
+        graphmcmc.cut_edge(graphmcmc.graph, 0, 2)
         assert graphmcmc.graph.number_of_edges() == 5
-        graphmcmc.cut_edge(0,1)
+        graphmcmc.cut_edge(graphmcmc.graph, 0, 1)
         assert nx.is_connected(graphmcmc.graph)
+
+    def test_add_or_cut(self):
+        '''This tests whether our add_or_cut() function properly directs us to add an edge or make a cut. It should add an edge with probability 1 when the graph has the minimum number of edges, and with probability 0 when it has maximal number of edges.'''
+        testfile = 'next_test.txt'#this is an input file with only three points
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()#this will make the minimally-connected graph
+        for i in range(100):
+            assert graphmcmc.add_or_cut(testing = True) == 1#we expect to always add to this minimal graph
+        graphmcmc.graph.add_edge(0,2)#now the graph has maximal connections
+        for i in range(100):
+            assert graphmcmc.add_or_cut(testing = True) == 0
+
+    def test_get_bridges(self):
+        '''This tests the get_bridges function to ensure that it returns all the bridges of a few simple graphs.'''
+        testgraph = nx.Graph()#just use pure graphs for testing
+        testgraph.add_edge(0,1)
+        testgraph.add_edge(0,2)
+        testgraph.add_edge(0,3)
+        testgraph.add_edge(0,4)
+        bridges = graphmcmc.get_bridges(testgraph)
+        #print("apparently bridges is {}".format(bridges))
+        for edge in testgraph.edges():
+            assert edge in bridges
+        testgraph.clear()
+        testgraph.add_edge(0,1)
+        testgraph.add_edge(0,2)
+        testgraph.add_edge(0,3)
+        testgraph.add_edge(1,2)
+        bridges = graphmcmc.get_bridges(testgraph)
+        assert len(bridges) == 1
+        assert (0,3) in bridges
+
         
     def test_command_line_interface(self):
         runner = CliRunner()
@@ -102,3 +134,28 @@ class TestGraphmcmc(unittest.TestCase):
         help_result = runner.invoke(cli.main, ['--help'])
         assert help_result.exit_code == 0
         assert '--help  Show this message and exit.' in help_result.output
+
+
+        
+    def test_propose_new_add(self):
+        '''This tests the propose_new function's add-an-edge capability on a small graph which allows only a particular mutation for the next step.'''
+        testfile = 'next_test.txt'#this is an input file with only three points
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        print("prop_graph now has edges {}".format(graphmcmc.prop_graph.edges()))
+        graphmcmc.propose_new()
+        print("and now it has {}".format(graphmcmc.prop_graph.edges()))
+        #only one proposal should be possible (new edge: 0-2)
+        assert len(graphmcmc.prop_graph.edges()) == 3
+        assert 0 in graphmcmc.prop_graph.neighbors(2)
+
+    def test_propose_new_cut(self):
+        '''This tests the propose_new functions' cut-an-edge capability on a small graph with limited configurations.'''
+        testfile = 'next_test.txt'#this is an input file with only three points
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.new_edge(graphmcmc.graph, 0, 2)#make it a loop
+        graphmcmc.new_edge(graphmcmc.prop_graph, 0, 2)#this too
+        #now that there's a loop, there's three viable cuts (and no unviable ones)
+        graphmcmc.propose_new()
+        assert len(graphmcmc.prop_graph.edges()) == 2
