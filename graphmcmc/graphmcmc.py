@@ -15,7 +15,9 @@ prop_graph = nx.Graph()#keep the proposal graph up-to-date with regular graph
 states = {}#an empty dict, will be used to track our states.
 zero_degree_sum = 0#this will be used for one of the stats we're asked to calculate
 edges_sum = 0#this will be used for one of the stats we're asked to calculate
-r = 0#this is the weight of the total-path-length in our MCMC 'energy'
+long_short_sum = 0#this will be used for one of the stats we're asked to calculate
+r = 0.0#this is the weight of the total-path-length in our MCMC 'energy'
+T = 1.0#this is the 'temperature' in our Metropolis-Hastings algorithm
 
 def read_file(infile):
     '''This function reads in the list of nodes from an input file of specified name, and builds the list of nodes, as well as setting the max and min number of edges possible for the graph .'''
@@ -44,8 +46,10 @@ def make_graph():
     global nodes
     global zero_degree_sum
     global edge_sum
+    global long_short_sum
     zero_degree_sum = 0#reset these just in case, when we make a new graph
     edge_sum = 0
+    long_short_sum = 0
     graph.clear()#in case make_graph is called repeatedly -- this is for tests
     prop_graph.clear()#in case make_graph is called repeatedly -- this is for tests
     #print("nodes is {}".format(nodes))
@@ -55,6 +59,7 @@ def make_graph():
         prop_graph.add_edge(i, i+1, weight=distance(nodes[i], nodes[i+1]))
     zero_degree_sum += len(graph.neighbors(0))
     edge_sum += graph.number_of_edges()
+    long_short_sum += get_longest_shortest(graph)
     
 
 def new_edge(graph, idx1, idx2):
@@ -153,8 +158,7 @@ def record_state():
     else:
         states[hashable] += 1#add one to the existing entry
 
-def get_longest_shortest():
-    global graph
+def get_longest_shortest(graph):
     #this just gives us a dict keyed by index with value minimal-path-length to it:
     shortest_paths = nx.single_source_dijkstra_path_length(graph,0,weight='weight')
     maximum = 0
@@ -173,3 +177,8 @@ def get_theta(graph):
     for edge in edge_weights:
         term1 += edge_weights[edge]
     return (r * term1 + term2)
+
+def get_pi_frac(graph1 = graph, graph2 = prop_graph, T = T):
+    th1 = get_theta(graph1)
+    th2 = get_theta(graph2)
+    return(math.exp(-(th1 - th2)/T))

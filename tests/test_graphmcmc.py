@@ -267,12 +267,20 @@ class TestGraphmcmc(unittest.TestCase):
         assert graphmcmc.edge_sum == 2
         #put in test to check behavior with step() function
 
+
     def test_get_longest_shortest(self):
         '''This tests the function to get the longest shortest path in the graph. (The longest path that is a shortest path from 0 to some index.)'''
         testfile = 'next_test.txt'
         graphmcmc.read_file(testfile)
         graphmcmc.make_graph()
-        assert (graphmcmc.get_longest_shortest() - 2) < 0.0001#float testing, y'all
+        assert (graphmcmc.get_longest_shortest(graphmcmc.graph) - 2) < 0.0001#float testing, y'all
+
+    def test_track_longest_shortest(self):
+        '''This tests to make sure now that we can get the longest-shortest-path in a graph, that we adequately keep a running sum for our updates.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert (graphmcmc.long_short_sum - 2) < 0.0001
 
     def test_get_theta(self):
         '''This checks that the calculated value for theta is accurate for a small control graph.'''
@@ -289,3 +297,25 @@ class TestGraphmcmc(unittest.TestCase):
         test_graph.add_edge(3,2, weight=0.5)
         test_graph.add_edge(3,5, weight=3)
         assert (graphmcmc.get_theta(test_graph) - (graphmcmc.r * 7.0 + 9.5) < 0.0001)
+
+    def test_different_theta(self):
+        '''A sanity check to make sure the theta for two different graphs differ.'''
+        test_graph = nx.Graph()
+        test_graph2 = nx.Graph()
+        for i in range(9):
+            test_graph.add_edge(i,i+1,weight=1)
+            test_graph2.add_edge(i,i+1,weight=1)
+        test_graph.add_edge(9,10,weight=1)
+        test_graph2.add_edge(9,10,weight=0.1)
+        theta1 = graphmcmc.get_theta(test_graph)
+        theta2 = graphmcmc.get_theta(test_graph2)
+        assert (theta1 != theta2)
+
+    def test_get_pi_frac(self):
+        '''This checks that our pi_i/pi_j function works on a pair of simple graphs.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.propose_new()
+        assert (graphmcmc.get_pi_frac() - math.exp(-2 * graphmcmc.r / graphmcmc.T) < 0.0001)
+        
