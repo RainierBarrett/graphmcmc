@@ -235,3 +235,18 @@ class TestGraphmcmc(unittest.TestCase):
             graphmcmc.propose_new()
             prob_forward = graphmcmc.get_q(graphmcmc.prop_graph, graphmcmc.graph)
             assert (prob_forward - float(1.0)/float(3.0)) < 1 * 10 **-7
+
+    def test_graph_counter(self):
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.record_state()
+        assert len(graphmcmc.states) == 1
+        #pretend we stayed at this state for testing
+        graphmcmc.record_state()
+        assert len(graphmcmc.states) == 1
+        assert graphmcmc.states[frozenset(nx.get_edge_attributes(graphmcmc.graph, 'weight'))] == 2
+        graphmcmc.new_edge(graphmcmc.graph, 0,2)
+        graphmcmc.record_state()
+        assert len(graphmcmc.states) == 2
+        assert graphmcmc.states[frozenset(nx.get_edge_attributes(graphmcmc.graph, 'weight'))] == 1

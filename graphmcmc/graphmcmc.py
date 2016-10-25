@@ -12,6 +12,7 @@ Nmax = 0
 Ni = 0
 graph = nx.Graph()
 prop_graph = nx.Graph()#keep the proposal graph up-to-date with regular graph
+states = {}#an empty dict, will be used to track our states.
 
 def read_file(infile):
     '''This function reads in the list of nodes from an input file of specified name, and builds the list of nodes, as well as setting the max and min number of edges possible for the graph .'''
@@ -129,3 +130,15 @@ def get_q(graph1, graph2):
         bridges = get_bridges(graph2)#need the list of bridges for prob_edge
         prob_edge = float(1.0) / ( graph1.number_of_edges() - len(bridges) )
         return ( prob_cut * prob_edge )
+
+def record_state():
+    '''This is the function used to track the states the Markov Chain has visited so far, and keep a running count of them. The counts will be used for statistics at the end.'''
+    global states
+    global graph
+    #this effectively generates an adjacency matrix for me:
+    adjacencies = nx.get_edge_attributes(graph, 'weight')
+    hashable = frozenset(adjacencies)
+    if(hashable not in states):
+        states[hashable] = 1#initialize a new entry, with one count
+    else:
+        states[hashable] += 1#add one to the existing entry
