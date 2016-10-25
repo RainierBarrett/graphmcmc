@@ -250,3 +250,42 @@ class TestGraphmcmc(unittest.TestCase):
         graphmcmc.record_state()
         assert len(graphmcmc.states) == 2
         assert graphmcmc.states[frozenset(nx.get_edge_attributes(graphmcmc.graph, 'weight'))] == 1
+
+    def test_track_zero_degree(self):
+        '''This makes sure that we're keeping track of the degree of the 0-node at each step.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert graphmcmc.zero_degree_sum == 1
+        #put in test to check behavior with step() function
+
+    def test_track_number_edges(self):
+        '''This makes sure that we're keeping track of the total number of edges in the graph at each step.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert graphmcmc.edge_sum == 2
+        #put in test to check behavior with step() function
+
+    def test_get_longest_shortest(self):
+        '''This tests the function to get the longest shortest path in the graph. (The longest path that is a shortest path from 0 to some index.)'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert (graphmcmc.get_longest_shortest() - 2) < 0.0001#float testing, y'all
+
+    def test_get_theta(self):
+        '''This checks that the calculated value for theta is accurate for a small control graph.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert (graphmcmc.get_theta(graphmcmc.graph) - (2.0 * graphmcmc.r + 3.0) < 0.0001)
+
+        #here's another check on a graph I did out myself
+        test_graph = nx.Graph()
+        test_graph.add_edge(0,1, weight=1)
+        test_graph.add_edge(1,3, weight=2)
+        test_graph.add_edge(1,2, weight=0.5)
+        test_graph.add_edge(3,2, weight=0.5)
+        test_graph.add_edge(3,5, weight=3)
+        assert (graphmcmc.get_theta(test_graph) - (graphmcmc.r * 7.0 + 9.5) < 0.0001)

@@ -13,6 +13,9 @@ Ni = 0
 graph = nx.Graph()
 prop_graph = nx.Graph()#keep the proposal graph up-to-date with regular graph
 states = {}#an empty dict, will be used to track our states.
+zero_degree_sum = 0#this will be used for one of the stats we're asked to calculate
+edges_sum = 0#this will be used for one of the stats we're asked to calculate
+r = 0#this is the weight of the total-path-length in our MCMC 'energy'
 
 def read_file(infile):
     '''This function reads in the list of nodes from an input file of specified name, and builds the list of nodes, as well as setting the max and min number of edges possible for the graph .'''
@@ -39,6 +42,10 @@ def make_graph():
     global prop_graph
     global Nmin#need to modify the actual graph
     global nodes
+    global zero_degree_sum
+    global edge_sum
+    zero_degree_sum = 0#reset these just in case, when we make a new graph
+    edge_sum = 0
     graph.clear()#in case make_graph is called repeatedly -- this is for tests
     prop_graph.clear()#in case make_graph is called repeatedly -- this is for tests
     #print("nodes is {}".format(nodes))
@@ -46,6 +53,9 @@ def make_graph():
     for i in range(Nmin):#for now, I'm just putting the tuples in a line
         graph.add_edge(i, i+1, weight=distance(nodes[i], nodes[i+1]))
         prop_graph.add_edge(i, i+1, weight=distance(nodes[i], nodes[i+1]))
+    zero_degree_sum += len(graph.neighbors(0))
+    edge_sum += graph.number_of_edges()
+    
 
 def new_edge(graph, idx1, idx2):
     '''This function takes two indices on the graph and adds an edge between them, with the weight given by the Euclidean distance between the points corresponding to the given indices. Lucky for me, the networkx.Graph object already ignores duplicate edges on a graph, so I don't have to check for that.'''
@@ -142,3 +152,24 @@ def record_state():
         states[hashable] = 1#initialize a new entry, with one count
     else:
         states[hashable] += 1#add one to the existing entry
+
+def get_longest_shortest():
+    global graph
+    #this just gives us a dict keyed by index with value minimal-path-length to it:
+    shortest_paths = nx.single_source_dijkstra_path_length(graph,0,weight='weight')
+    maximum = 0
+    for item in shortest_paths:#just look at all the dict items
+        maximum = max(0, shortest_paths[item])
+    return maximum
+
+def get_theta(graph):
+    global r
+    shortest_paths = nx.single_source_dijkstra_path_length(graph,0,weight='weight')
+    term1 = 0
+    term2 = 0
+    for item in shortest_paths:
+        term2 += shortest_paths[item]
+    edge_weights = nx.get_edge_attributes(graph, 'weight')
+    for edge in edge_weights:
+        term1 += edge_weights[edge]
+    return (r * term1 + term2)
