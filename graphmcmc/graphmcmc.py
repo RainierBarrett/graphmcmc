@@ -159,6 +159,7 @@ def record_state():
         states[hashable] += 1#add one to the existing entry
 
 def get_longest_shortest(graph):
+    '''This function gets the length of the longest-shortest path in the given graph. Used for statistics in assignment.'''
     #this just gives us a dict keyed by index with value minimal-path-length to it:
     shortest_paths = nx.single_source_dijkstra_path_length(graph,0,weight='weight')
     maximum = 0
@@ -167,6 +168,7 @@ def get_longest_shortest(graph):
     return maximum
 
 def get_theta(graph):
+    '''This function calculates the theta of a given graph based on the Boltzmann-style formula given in the assignment.'''
     global r
     shortest_paths = nx.single_source_dijkstra_path_length(graph,0,weight='weight')
     term1 = 0
@@ -179,6 +181,45 @@ def get_theta(graph):
     return (r * term1 + term2)
 
 def get_pi_frac(graph1 = graph, graph2 = prop_graph, T = T):
+    '''This function gets the pi_j/pi_i term for the Metropolis-Hastings update step.'''
     th1 = get_theta(graph1)
     th2 = get_theta(graph2)
     return(math.exp(-(th1 - th2)/T))
+
+def update( forward ):
+    '''This function will update graph and prop_graph based on whether forward is True (graph becomes identical to prop_graph) or False (prop_graph reverts to graph).'''
+    global graph
+    global prop_graph
+    if(forward):
+        if(graph.number_of_edges() < prop_graph.number_of_edges()):
+            #we're moving forward with an addition
+            edge_difference = list(set(prop_graph.edges()) - set(graph.edges()))
+            #now edge_difference is a list of length 1 containing the edge graph needs
+            new_edge(graph, edge_difference[0][0], edge_difference[0][1])
+            #now graph matches prop_graph again, and we can continue
+        else:
+            #we're moving forward with a cut
+            edge_difference = list(set(graph.edges()) - set(prop_graph.edges()))
+            cut_edge(graph, edge_difference[0][0], edge_difference[0][1])
+    else:
+        #we need to revert prop_graph to graph
+        if(graph.number_of_edges() < prop_graph.number_of_edges()):
+            #prop_graph is too big, cut the offending edge
+            edge_difference = list(set(prop_graph.edges()) - set(graph.edges()))
+            cut_edge(prop_graph, edge_difference[0][0], edge_difference[0][1])
+        else:
+            #prop_graph has a cut we need to undo
+            edge_difference = list(set(graph.edges()) - set(prop_graph.edges()))
+            new_edge(prop_graph, edge_difference[0][0], edge_difference[0][1])
+
+
+def accept_move(graph1 = graph, graph2 = prop_graph):
+    pi_frac = get_pi_frac()
+    q_ij = get_q(graph1, graph2)
+    q_ji = get_q(graph2, graph1)
+    rand = random.random()
+    a_ij = min((pi_frac * q_ij/q_ji), 1)
+    if(rand < a_ij):
+        return(True)
+    else:
+        return(False)

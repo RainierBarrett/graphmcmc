@@ -318,4 +318,52 @@ class TestGraphmcmc(unittest.TestCase):
         graphmcmc.make_graph()
         graphmcmc.propose_new()
         assert (graphmcmc.get_pi_frac() - math.exp(-2 * graphmcmc.r / graphmcmc.T) < 0.0001)
+
+    def test_update(self):
+        '''This tests to make sure we can update our two graphs appropriately. When we accept a move, should update graph, and when we reject a move, should revert prop_graph. There are four cases to test: when we move forward with a cut, forward with an addition, when we revert a cut, and when we revert an addition.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.propose_new()#propose an addition.
+        graphmcmc.update(False)#we should revert the proposal graph now...
+        assert graphmcmc.graph.number_of_edges() == graphmcmc.prop_graph.number_of_edges()
+        assert graphmcmc.graph.number_of_edges() == 2
+
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.propose_new()
+        graphmcmc.update(True)#pretend we accepted
+        assert graphmcmc.graph.number_of_edges() == graphmcmc.prop_graph.number_of_edges()
+        assert graphmcmc.graph.number_of_edges() == 3
+
+        #can go right into testing the cutting:
+        graphmcmc.propose_new()
+        graphmcmc.update(False)
+        assert graphmcmc.graph.number_of_edges() == graphmcmc.prop_graph.number_of_edges()
+        assert graphmcmc.graph.number_of_edges() == 3
+
+        graphmcmc.propose_new()
+        graphmcmc.update(True)
+        assert graphmcmc.graph.number_of_edges() == graphmcmc.prop_graph.number_of_edges()
+        assert graphmcmc.graph.number_of_edges() == 2
         
+    def test_accept_move(self):
+        '''This checks whether our accept/reject function works appropriately.'''
+        testfile = 'next_test.txt'
+        #this testfile only has one possible initial move,
+        #but three possible moves after the initial acceptance happens
+        #so if we run 1000 steps, we should almost certainly have non-zero, non-always acceptance
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        tot = 0
+        for i in range(1000):
+            graphmcmc.propose_new()
+            if(graphmcmc.accept_move()):
+                graphmcmc.update(True)
+                tot += 1
+            else:
+                graphmcmc.update(False)
+                tot -= 1
+        assert tot != 1000
+        assert tot != 0
