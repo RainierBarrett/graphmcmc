@@ -19,6 +19,7 @@ from graphmcmc import cli
 import networkx as nx
 import graphviz as gv
 import math
+import copy
 
 
 class TestGraphmcmc(unittest.TestCase):
@@ -100,10 +101,10 @@ class TestGraphmcmc(unittest.TestCase):
         graphmcmc.read_file(testfile)
         graphmcmc.make_graph()#this will make the minimally-connected graph
         for i in range(100):
-            assert graphmcmc.add_or_cut(testing = True) == 1#we expect to always add to this minimal graph
+            assert graphmcmc.add_or_cut() == 1#we expect to always add to this minimal graph
         graphmcmc.graph.add_edge(0,2)#now the graph has maximal connections
         for i in range(100):
-            assert graphmcmc.add_or_cut(testing = True) == 0
+            assert graphmcmc.add_or_cut() == 0
 
     def test_get_bridges(self):
         '''This tests the get_bridges function to ensure that it returns all the bridges of a few simple graphs.'''
@@ -237,10 +238,10 @@ class TestGraphmcmc(unittest.TestCase):
             assert (prob_forward - float(1.0)/float(3.0)) < 1 * 10 **-7
 
     def test_graph_counter(self):
+        '''This tests to make sure our record_states() function counts graph occurrences correctly.'''
         testfile = 'next_test.txt'
         graphmcmc.read_file(testfile)
         graphmcmc.make_graph()
-        graphmcmc.record_state()
         assert len(graphmcmc.states) == 1
         #pretend we stayed at this state for testing
         graphmcmc.record_state()
@@ -250,37 +251,6 @@ class TestGraphmcmc(unittest.TestCase):
         graphmcmc.record_state()
         assert len(graphmcmc.states) == 2
         assert graphmcmc.states[frozenset(nx.get_edge_attributes(graphmcmc.graph, 'weight'))] == 1
-
-    def test_track_zero_degree(self):
-        '''This makes sure that we're keeping track of the degree of the 0-node at each step.'''
-        testfile = 'next_test.txt'
-        graphmcmc.read_file(testfile)
-        graphmcmc.make_graph()
-        assert graphmcmc.zero_degree_sum == 1
-        #put in test to check behavior with step() function
-
-    def test_track_number_edges(self):
-        '''This makes sure that we're keeping track of the total number of edges in the graph at each step.'''
-        testfile = 'next_test.txt'
-        graphmcmc.read_file(testfile)
-        graphmcmc.make_graph()
-        assert graphmcmc.edge_sum == 2
-        #put in test to check behavior with step() function
-
-
-    def test_get_longest_shortest(self):
-        '''This tests the function to get the longest shortest path in the graph. (The longest path that is a shortest path from 0 to some index.)'''
-        testfile = 'next_test.txt'
-        graphmcmc.read_file(testfile)
-        graphmcmc.make_graph()
-        assert (graphmcmc.get_longest_shortest(graphmcmc.graph) - 2) < 0.0001#float testing, y'all
-
-    def test_track_longest_shortest(self):
-        '''This tests to make sure now that we can get the longest-shortest-path in a graph, that we adequately keep a running sum for our updates.'''
-        testfile = 'next_test.txt'
-        graphmcmc.read_file(testfile)
-        graphmcmc.make_graph()
-        assert (graphmcmc.long_short_sum - 2) < 0.0001
 
     def test_get_theta(self):
         '''This checks that the calculated value for theta is accurate for a small control graph.'''
@@ -367,3 +337,74 @@ class TestGraphmcmc(unittest.TestCase):
                 tot -= 1
         assert tot != 1000
         assert tot != 0
+
+    def test_step(self):
+        '''This is a sanity test to make sure step() changes the graphs the way we expect. This is arguably not a unit test per se, but an integrated test, since step() just implements several functions already called.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        orig_zero_sum = copy.deepcopy(graphmcmc.zero_degree_sum)
+        print("original zero sum was {}\n".format(orig_zero_sum))
+        orig_edge_sum = copy.deepcopy(graphmcmc.edge_sum)
+        print("original edge sum was {}\n".format(orig_edge_sum))
+        orig_long_sum = copy.deepcopy(graphmcmc.long_short_sum)
+        print("original long_short sum was {}\n".format(orig_long_sum))
+        graphmcmc.step()
+        assert graphmcmc.graph.number_of_edges() == 3
+        assert graphmcmc.prop_graph.number_of_edges() == 3#should have made a move
+        assert graphmcmc.zero_degree_sum > orig_zero_sum
+        assert graphmcmc.zero_degree_sum == 3#should have added one edge. 1 + 2 == 3
+        assert graphmcmc.edge_sum > orig_edge_sum
+        assert graphmcmc.edge_sum == 5#should have added one edge. 2 + 3 == 5
+        assert graphmcmc.long_short_sum > orig_long_sum
+        assert graphmcmc.long_short_sum == 4
+        #also need to make sure the number of states in states has increased.
+        assert (len(graphmcmc.states) == 2 or graphmcmc.states[frozenset(nx.get_edge_attributes(graphmcmc.graph, 'weight'))] == 2)
+
+    def test_track_zero_degree(self):
+        '''This makes sure that we're keeping track of the degree of the 0-node at each step.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert graphmcmc.zero_degree_sum == 1
+
+    def test_track_number_edges(self):
+        '''This makes sure that we're keeping track of the total number of edges in the graph at each step.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert graphmcmc.edge_sum == 2
+
+    def test_get_longest_shortest(self):
+        '''This tests the function to get the longest shortest path in the graph. (The longest path that is a shortest path from 0 to some index.)'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert (graphmcmc.get_longest_shortest(graphmcmc.graph) - 2) < 0.0001#float testing, y'all
+
+    def test_track_longest_shortest(self):
+        '''This tests to make sure now that we can get the longest-shortest-path in a graph, that we adequately keep a running sum for our updates.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        assert (graphmcmc.long_short_sum - 2) < 0.0001
+
+    def test_run(self):
+        '''This tests to make sure our program can run for a given number of steps without weird behavior. This also is mostly just a 'does it work' test.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.run(2)#run only 2 steps
+        #either we went forward one and then back, or we saw two new states
+        assert len(graphmcmc.states) == 2 or len(graphmcmc.states) == 3
+
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.run(99)#now we'll really make sure record_states works...
+        #use 99 here for testing because we already record one state during initialization
+        total = 0
+        for item in graphmcmc.states:
+            total += graphmcmc.states[item]
+            print("graphmcmc.states[{}] is {}".format(list(item), graphmcmc.states[item]))
+        print("total is {}\n".format(total))
+        assert total == 100

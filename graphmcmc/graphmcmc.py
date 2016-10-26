@@ -47,9 +47,11 @@ def make_graph():
     global zero_degree_sum
     global edge_sum
     global long_short_sum
+    global states
     zero_degree_sum = 0#reset these just in case, when we make a new graph
     edge_sum = 0
     long_short_sum = 0
+    states.clear()
     graph.clear()#in case make_graph is called repeatedly -- this is for tests
     prop_graph.clear()#in case make_graph is called repeatedly -- this is for tests
     #print("nodes is {}".format(nodes))
@@ -60,6 +62,7 @@ def make_graph():
     zero_degree_sum += len(graph.neighbors(0))
     edge_sum += graph.number_of_edges()
     long_short_sum += get_longest_shortest(graph)
+    record_state()
     
 
 def new_edge(graph, idx1, idx2):
@@ -71,7 +74,7 @@ def cut_edge(graph, idx1, idx2):
     if(idx1 in graph.neighbors(idx2) and ( len(graph.neighbors(idx1)) > 1 and len(graph.neighbors(idx2)) > 1)):#make sure we only try to remove if it's there
         graph.remove_edge(idx1,idx2)
 
-def add_or_cut(testing = False):
+def add_or_cut():
     '''This function is used to determine whether we will add an edge or cut an edge at each MCMC step. The probability of adding an edge is inversely proportional to the number of edges. When we have the minimum number of edges in a connected simple graph (N - 1), P(add) is 1, and when we have the maximum number of edges (N * (N - 1)/2), the probability is 0. The exact formula can be found in the documentation.'''
     global graph
     global Nmax
@@ -79,8 +82,6 @@ def add_or_cut(testing = False):
     #this is 1 when current edge count is minimal, and 0 when current edge count is maximal
     prob_add = ( Nmax - graph.number_of_edges() ) / ( Nmax - Nmin )
     rand = random.random()#roll the dice
-    #if testing:#during tests, make sure RNG is working
-    #    print("rand is {}".format(rand))
     if ( rand < prob_add ):
         return 1 #1 for add
     else:
@@ -106,7 +107,7 @@ def get_bridges(graph):
     return bridges
     
 def propose_new():
-    '''This is the meat of the MCMC algorithm. This will take the current graph configuration and propose a modification to it by either subtracting or adding a qualifying edge (from the proposal grpah), with probability of adding inversely proportional to the amount of edges (0 if we have max number of edges, 1 if we have min number of edges). After this function is called, we accept or reject the move with probability (pi_j * q(i|j))/(pi_i * q(j|i)). NOTE: This proposal distribution will never propose that the next state be unchanged, and so the system will only remain in a given state based on the '''
+    '''This is the meat of the MCMC algorithm. This will take the current graph configuration and propose a modification to it by either subtracting or adding a qualifying edge (from the proposal grpah), with probability of adding inversely proportional to the amount of edges (0 if we have max number of edges, 1 if we have min number of edges). After this function is called, we accept or reject the move with probability (pi_j * q(i|j))/(pi_i * q(j|i)). NOTE: This proposal distribution will never propose that the next state be unchanged, and so the system will only remain in a given state based on the Metropolis-Hastings algorithms' rejection chance.'''
     global prop_graph
     node_count = prop_graph.number_of_nodes()
     if add_or_cut() == 1:
@@ -212,14 +213,33 @@ def update( forward ):
             edge_difference = list(set(graph.edges()) - set(prop_graph.edges()))
             new_edge(prop_graph, edge_difference[0][0], edge_difference[0][1])
 
-
 def accept_move(graph1 = graph, graph2 = prop_graph):
+    '''This is the Metropolis-Hastings acceptance/rejection function.'''
     pi_frac = get_pi_frac()
     q_ij = get_q(graph1, graph2)
     q_ji = get_q(graph2, graph1)
-    rand = random.random()
     a_ij = min((pi_frac * q_ij/q_ji), 1)
+    rand = random.random()
     if(rand < a_ij):
         return(True)
     else:
         return(False)
+
+def step():
+    '''This function is the step-maker. Called once each timestep, it calls propose_new(), determines whether the move is acceptable with accept_move(), then update()s appropriately. It also records the state we've now moved to, and adds to our running statistic totals after it finishes stepping.'''
+    global graph
+    global prop_graph
+    global long_short_sum
+    global zero_degree_sum
+    global edge_sum
+    propose_new()
+    forward = accept_move()
+    update(forward)
+    record_state()
+    long_short_sum += get_longest_shortest(graph)
+    zero_degree_sum += len(graph.neighbors(0))
+    edge_sum += graph.number_of_edges()
+
+def run(nsteps):
+    for i in range(nsteps):
+        step()
