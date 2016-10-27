@@ -18,6 +18,7 @@ edges_sum = 0#this will be used for one of the stats we're asked to calculate
 long_short_sum = 0#this will be used for one of the stats we're asked to calculate
 r = 0.0#this is the weight of the total-path-length in our MCMC 'energy'
 T = 1.0#this is the 'temperature' in our Metropolis-Hastings algorithm
+top_percent = []#this will hold the "best" graphs
 
 def read_file(infile):
     '''This function reads in the list of nodes from an input file of specified name, and builds the list of nodes, as well as setting the max and min number of edges possible for the graph .'''
@@ -30,7 +31,7 @@ def read_file(infile):
         for i in f:
             nodes.append((tuple(map(float,i.split(',')))))
     Nmin = (len(nodes) - 1) #the minimum number of edges is n-1
-    Nmax = len(nodes) * (len(nodes) -1)/ 2 #the most edges we can have is n(n-1)/2
+    Nmax = (len(nodes) * (len(nodes) -1))/ 2 #the most edges we can have is n(n-1)/2
 
 
 
@@ -54,8 +55,6 @@ def make_graph():
     states.clear()
     graph.clear()#in case make_graph is called repeatedly -- this is for tests
     prop_graph.clear()#in case make_graph is called repeatedly -- this is for tests
-    #print("nodes is {}".format(nodes))
-    #print("nmin is {}".format(Nmin))
     for i in range(Nmin):#for now, I'm just putting the tuples in a line
         graph.add_edge(i, i+1, weight=distance(nodes[i], nodes[i+1]))
         prop_graph.add_edge(i, i+1, weight=distance(nodes[i], nodes[i+1]))
@@ -83,34 +82,32 @@ def add_or_cut():
     prob_add = ( Nmax - graph.number_of_edges() ) / ( Nmax - Nmin )
     rand = random.random()#roll the dice
     if ( rand < prob_add ):
-        return 1 #1 for add
+        return True #1 for add
     else:
-        return 0 #0 for subtract
+        return False #0 for subtract
 
 def get_bridges(graph):
     cycle_list = nx.cycle_basis(graph)
     bridges = []
     for edge in graph.edges():
         if(len(cycle_list) == 0):
-            #print("All edges are bridges!")
             return(graph.edges())
         for cycle in cycle_list:
             p1, p2 = edge[0], edge[1]
             in_cycle = False
             for i in range(len(cycle)):
                 if ((p1 == cycle[i] and p2 == cycle[(i+1)%len(cycle)]) or (p2 == cycle[i] and p1 == cycle[(i+1)%len(cycle)])):
-                    #print("{} is in the cycle {}".format(edge,cycle))
                     in_cycle = True 
             if not in_cycle:
-                #print("{} is a bridge!".format(edge))
                 bridges.append(edge)
     return bridges
     
 def propose_new():
     '''This is the meat of the MCMC algorithm. This will take the current graph configuration and propose a modification to it by either subtracting or adding a qualifying edge (from the proposal grpah), with probability of adding inversely proportional to the amount of edges (0 if we have max number of edges, 1 if we have min number of edges). After this function is called, we accept or reject the move with probability (pi_j * q(i|j))/(pi_i * q(j|i)). NOTE: This proposal distribution will never propose that the next state be unchanged, and so the system will only remain in a given state based on the Metropolis-Hastings algorithms' rejection chance.'''
+    global graph
     global prop_graph
     node_count = prop_graph.number_of_nodes()
-    if add_or_cut() == 1:
+    if add_or_cut():
         #time to add
         pt1, pt2 = random.randint(0, node_count - 1), random.randint(0, node_count - 1)
         #make sure they don't come out the same, and that the edge doesn't already exist
@@ -122,12 +119,10 @@ def propose_new():
         new_edge(prop_graph, pt1, pt2)
     else:
         #time to cut
-        bridges = get_bridges(prop_graph)#need the list of bridges to ensure we pick a good cut
-        non_bridges = list(set(prop_graph.edges()) - set(bridges))
-        #print("the non-bridge elements are {}".format(non_bridges))
-        target_idx = random.randint(0,len(non_bridges)-1)
-        cut_edge(prop_graph, non_bridges[target_idx][0], non_bridges[target_idx][1])
-
+        while(graph.number_of_edges() == prop_graph.number_of_edges()):
+            pt1 = random.randint(0, node_count - 1)
+            pt2 = random.randint(0, node_count - 1)
+            cut_edge(prop_graph, pt1, pt2)
     return
 
 def get_q(graph1, graph2):
@@ -144,7 +139,7 @@ def get_q(graph1, graph2):
     else:#graph2.number_of_edges() < graph1.number_of_edges
         prob_cut = float(1.0) - prob_add
         bridges = get_bridges(graph2)#need the list of bridges for prob_edge
-        prob_edge = float(1.0) / ( graph1.number_of_edges() - len(bridges) )
+        prob_edge = (float(1.0) / ( graph1.number_of_edges() - len(bridges) )) if ( graph1.number_of_edges() - len(bridges) ) > 0 else 0
         return ( prob_cut * prob_edge )
 
 def record_state():
@@ -191,14 +186,14 @@ def update( forward ):
     '''This function will update graph and prop_graph based on whether forward is True (graph becomes identical to prop_graph) or False (prop_graph reverts to graph).'''
     global graph
     global prop_graph
-    if(forward):
+    if(forward == True):
         if(graph.number_of_edges() < prop_graph.number_of_edges()):
             #we're moving forward with an addition
             edge_difference = list(set(prop_graph.edges()) - set(graph.edges()))
             #now edge_difference is a list of length 1 containing the edge graph needs
             new_edge(graph, edge_difference[0][0], edge_difference[0][1])
             #now graph matches prop_graph again, and we can continue
-        else:
+        elif(graph.number_of_edges() > prop_graph.number_of_edges()):
             #we're moving forward with a cut
             edge_difference = list(set(graph.edges()) - set(prop_graph.edges()))
             cut_edge(graph, edge_difference[0][0], edge_difference[0][1])
@@ -218,7 +213,7 @@ def accept_move(graph1 = graph, graph2 = prop_graph):
     pi_frac = get_pi_frac()
     q_ij = get_q(graph1, graph2)
     q_ji = get_q(graph2, graph1)
-    a_ij = min((pi_frac * q_ij/q_ji), 1)
+    a_ij = min((pi_frac * q_ij/q_ji), 1) if q_ji > 0 else 1
     rand = random.random()
     if(rand < a_ij):
         return(True)
@@ -240,6 +235,36 @@ def step():
     zero_degree_sum += len(graph.neighbors(0))
     edge_sum += graph.number_of_edges()
 
+def get_stats(nsteps):
+    global edge_sum
+    global zero_degree_sum
+    global long_short_sum
+    stats = []
+    stats.append(float(zero_degree_sum)/float(nsteps))
+    stats.append(float(edge_sum)/float(nsteps))
+    stats.append(float(long_short_sum)/float(nsteps))
+    return(stats)
+    
 def run(nsteps):
+    global graph
     for i in range(nsteps):
         step()
+    stats = get_stats(nsteps)
+    print("The expected degree of vertex 0 is: {}\nThe expected number of total edges in a graph is: {}\nThe expected length of the largest shortest path from 0 to any other vertex is: {}\n".format(stats[0],stats[1],stats[2]))
+    
+def get_top_percent(graph_dict):
+    '''This function treats our list of states and orders them by the number of times each has occurred, then outputs the top 1% of them in that ordering.'''
+    tuples = graph_dict.items()
+    count = 0
+    top_percent = []
+    while(count < len(graph_dict)/100):
+        current_max = 0
+        current_best = {}
+        #find the biggest count left, and track the graph it goes with.
+        for item in tuples:
+            if item[1] > current_max:
+                current_max = item[1]
+                current_best = item[0]
+        count += current_max
+        top_percent.append(current_best)
+    return(list(top_percent))

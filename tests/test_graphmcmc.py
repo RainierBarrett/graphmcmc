@@ -49,7 +49,7 @@ class TestGraphmcmc(unittest.TestCase):
         assert len(graphmcmc.nodes) == 6#make sure it's the right size
         for i in  range(len(tuples)):
             assert tuples[i] == graphmcmc.nodes[i]
-        print('\n', tuples, ' == ', graphmcmc.nodes)
+        assert graphmcmc.Nmax == 15
         
     def test_distance(self):
         '''This tests the distance function is working properly for a variety of inputs'''
@@ -114,7 +114,6 @@ class TestGraphmcmc(unittest.TestCase):
         testgraph.add_edge(0,3)
         testgraph.add_edge(0,4)
         bridges = graphmcmc.get_bridges(testgraph)
-        #print("apparently bridges is {}".format(bridges))
         for edge in testgraph.edges():
             assert edge in bridges
         testgraph.clear()
@@ -143,9 +142,7 @@ class TestGraphmcmc(unittest.TestCase):
         testfile = 'next_test.txt'#this is an input file with only three points
         graphmcmc.read_file(testfile)
         graphmcmc.make_graph()
-        #print("prop_graph now has edges {}".format(graphmcmc.prop_graph.edges()))
         graphmcmc.propose_new()
-        #print("and now it has {}".format(graphmcmc.prop_graph.edges()))
         #only one proposal should be possible (new edge: 0-2)
         assert len(graphmcmc.prop_graph.edges()) == 3
         assert 0 in graphmcmc.prop_graph.neighbors(2)
@@ -344,11 +341,8 @@ class TestGraphmcmc(unittest.TestCase):
         graphmcmc.read_file(testfile)
         graphmcmc.make_graph()
         orig_zero_sum = copy.deepcopy(graphmcmc.zero_degree_sum)
-        print("original zero sum was {}\n".format(orig_zero_sum))
         orig_edge_sum = copy.deepcopy(graphmcmc.edge_sum)
-        print("original edge sum was {}\n".format(orig_edge_sum))
         orig_long_sum = copy.deepcopy(graphmcmc.long_short_sum)
-        print("original long_short sum was {}\n".format(orig_long_sum))
         graphmcmc.step()
         assert graphmcmc.graph.number_of_edges() == 3
         assert graphmcmc.prop_graph.number_of_edges() == 3#should have made a move
@@ -405,6 +399,24 @@ class TestGraphmcmc(unittest.TestCase):
         total = 0
         for item in graphmcmc.states:
             total += graphmcmc.states[item]
-            print("graphmcmc.states[{}] is {}".format(list(item), graphmcmc.states[item]))
-        print("total is {}\n".format(total))
         assert total == 100
+
+    def test_stats(self):
+        '''This tests that our statistics-generating function is working as intended, using a knowable one-step chain.'''
+        testfile = 'next_test.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.run(1)#we'll have been to exactly 2 states
+        stats = graphmcmc.get_stats(2)
+        assert (stats[0] - 1.5) < 0.0001#the expected degree of vertex 0
+        assert (stats[1] - 2.5) < 0.0001#the expected number of edges
+        assert (stats[2] - 2.0) < 0.0001#the expected length of the longest shortest path
+
+    def test_get_top_percent(self):
+        '''This tests that we can return the top 1% most likely graphs from among all graphs visited. Again, this is not tenable to 'really' test, so this is more of a does-it-work/integrated test.'''
+        testfile = 'test_infile.txt'
+        graphmcmc.read_file(testfile)
+        graphmcmc.make_graph()
+        graphmcmc.run(1000)
+        besties = graphmcmc.get_top_percent(graphmcmc.states)
+        assert len(besties) > 0
