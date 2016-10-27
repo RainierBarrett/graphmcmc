@@ -252,7 +252,7 @@ def run(nsteps):
     stats = get_stats(nsteps)
     print("The expected degree of vertex 0 is: {}\nThe expected number of total edges in a graph is: {}\nThe expected length of the largest shortest path from 0 to any other vertex is: {}\n".format(stats[0],stats[1],stats[2]))
     
-def get_top_percent(graph_dict):
+def get_top_percent(graph_dict = states):
     '''This function treats our list of states and orders them by the number of times each has occurred, then outputs the top 1% of them in that ordering.'''
     tuples = graph_dict.items()
     count = 0
